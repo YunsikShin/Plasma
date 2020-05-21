@@ -5,6 +5,7 @@ import utils.flags as flags_module
 import models.vgg16 as model_module
 import importlib
 import numpy as np
+import tensorflow as tf
 import pdb
 
 
@@ -18,6 +19,7 @@ class train_class:
         model_class = model_module.vgg16(input_shape = (4, 256, 1))
         self.model = model_class.model
         self.initialization()
+        self.train_next_batch()
 
     def initialization(self):
         self.train_data = np.load(os.path.join(self.factory.dir_train_data))
@@ -35,13 +37,19 @@ class train_class:
     def train_next_batch(self):
         batch_size = self.train_flags.batch_size
         self.max_batch_count = int(self.num_train_img / batch_size)
-        if self.train_batch_count = 0:
+        if self.train_batch_count == 0:
             np.random.shuffle(self.train_indices)
-        batch_img = np.zeros(shape = (batch_size, self.data_flags.Ls, self.data_flags.Ls_shift),
+        batch_img = np.zeros(shape = (batch_size, 4, self.data_flags.Ls),
                              dtype = np.float32)
         batch_idx = self.train_indices[self.train_batch_count * batch_size:\
                                        (self.train_batch_count + 1)*batch_size]
         batch_data = self.train_data[batch_idx]
+        for i in range(batch_size):
+            img = np.load(batch_data[i, 0])
+            img = img[1:, :]
+            batch_img[i, :, :] = img
+            pdb.set_trace()
+
 
 
 
