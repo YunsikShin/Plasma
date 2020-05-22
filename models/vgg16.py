@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense, Dropout
 
 class vgg16:
     def __init__(self, input_shape):
@@ -37,7 +37,9 @@ class vgg16:
         x = MaxPool2D(pool_size = (1, 2), padding = 'valid')(x)
         x = Flatten()(x)
         x = Dense(units = 1024, activation = 'relu', name = 'fc1')(x)
+        x = Dropout(0.5)(x)
         x = Dense(units = 1024, activation = 'relu', name = 'fc2')(x)
+        x = Dropout(0.5)(x)
         x = Dense(units = 2, activation = None, name = 'logit_layer')(x)
         self.model = tf.keras.Model(inputs = input_tensor, outputs = x)
 

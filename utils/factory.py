@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 class factory_class:
     def __init__(self, sys_flags, data_flags):
+        print('[i]  Class : factory_class')
         self.sys_flags = sys_flags
         self.data_flags = data_flags
         self.initialization()
@@ -144,6 +145,7 @@ class factory_class:
             np.save(self.dir_abnormal_std, abnormal_std)
 
     def get_img(self):
+        print('[i]    Function : get_img')
         self.dir_img = os.path.join(self.dir_processed, 'img')
         self.dir_img_normal_train = os.path.join(self.dir_img, 'normal_train')
         self.dir_img_normal_test = os.path.join(self.dir_img, 'normal_test')
@@ -198,6 +200,7 @@ class factory_class:
                                                                                +num_saved_img))
                     seg = npy_data[:, Ls_shift*seg_idx : Ls_shift*seg_idx + Ls]
                     np.save(dir_seg, seg)
+            num_seg = int((7000 - Ls) / Ls_shift - 1)
             for npy_idx in range(num_abnormal_train):
                 npy_data = np.load(os.path.join(self.dir_npy_abnormal_rm, 
                                                 '%s'%abnormal_npy_list[npy_idx]))
@@ -252,6 +255,7 @@ class factory_class:
             normal_train_data = np.append(dirs_normal_train, label_normal_train, axis=1)
             abnormal_train_data = np.append(dirs_abnormal_train, label_abnormal_train, axis=1)
             train_data = np.append(normal_train_data, abnormal_train_data, axis=0)
+            num_train_data = train_data.shape[0]
             dirs_normal_test = []
             dirs_abnormal_test = []
             for idx in range(num_normal_test):
@@ -265,6 +269,7 @@ class factory_class:
             normal_test_data = np.append(dirs_normal_test, label_normal_test, axis=1)
             abnormal_test_data = np.append(dirs_abnormal_test, label_abnormal_test, axis=1)
             test_data = np.append(normal_test_data, abnormal_test_data, axis=0)
+            num_test_data = test_data.shape[0]
             np.save(self.dir_train_data, train_data)
             np.save(self.dir_test_data, test_data)
 
