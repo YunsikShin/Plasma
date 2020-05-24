@@ -63,7 +63,6 @@ class factory_class:
         num_fig = 5
         if not os.path.exists(self.dir_npy_figs):
             self._make_dir(self.dir_npy_figs)
-            num_normal = len(os.listdir(self.dir_processed_npy_normal))
             for npy_idx in range(num_fig):
                 npy_data_normal = np.load(os.path.join(self.dir_processed_npy_normal, 
                                                        '%d.npy'%npy_idx))
@@ -132,36 +131,23 @@ class factory_class:
             normal_std /= self.num_npy_normal
             np.save(self.dir_normal_mean, normal_mean)
             np.save(self.dir_normal_std, normal_std)
-            abnormal_mean = 0
-            abnormal_std = 0
-            for npy_idx in range(self.num_npy_abnormal):
-                npy_data = np.load(os.path.join(self.dir_npy_abnormal_rm, '%d.npy'%npy_idx))
-                npy_data = npy_data.astype(np.float32)
-                abnormal_mean += np.mean(npy_data, axis=1)
-                abnormal_std += np.std(npy_data, axis=1)
-            abnormal_mean /= self.num_npy_abnormal
-            abnormal_std /= self.num_npy_abnormal
-            np.save(self.dir_abnormal_mean, abnormal_mean)
-            np.save(self.dir_abnormal_std, abnormal_std)
 
     def get_img(self):
         print('[i]    Function : get_img')
-        self.dir_img = os.path.join(self.dir_processed, 'img')
+        data_flags = self.data_flags
+        self.dir_img = os.path.join(self.dir_processed, 'img_Ls_%d'%(data_flags.Ls))
         self.dir_img_normal_train = os.path.join(self.dir_img, 'normal_train')
         self.dir_img_normal_test = os.path.join(self.dir_img, 'normal_test')
         self.dir_img_abnormal_train = os.path.join(self.dir_img, 'abnormal_train')
         self.dir_img_abnormal_test = os.path.join(self.dir_img, 'abnormal_test')
         if not os.path.exists(self.dir_img):
-            data_flags = self.data_flags
             self._make_dir(self.dir_img)
             self._make_dir(self.dir_img_normal_train)
             self._make_dir(self.dir_img_normal_test)
             self._make_dir(self.dir_img_abnormal_train)
             self._make_dir(self.dir_img_abnormal_test)
             num_normal_train = int(self.num_npy_normal * self.data_flags.train_data_ratio) 
-            num_normal_test = self.num_npy_normal - num_normal_train
             num_abnormal_train = int(self.num_npy_abnormal * self.data_flags.train_data_ratio)
-            num_abnormal_test = self.num_npy_abnormal - num_abnormal_train
             normal_npy_list = os.listdir(self.dir_processed_npy_normal)
             abnormal_npy_list = os.listdir(self.dir_npy_abnormal_rm)
             np.random.shuffle(normal_npy_list)
@@ -206,8 +192,8 @@ class factory_class:
                                                 '%s'%abnormal_npy_list[npy_idx]))
                 npy_data = npy_data.astype(np.float32)
                 if data_flags.use_normalize:
-                    mean = np.load(os.path.join(self.dir_processed, 'abnormal_mean.npy'))
-                    std = np.load(os.path.join(self.dir_processed, 'abnormal_std.npy'))
+                    mean = np.load(os.path.join(self.dir_processed, 'normal_mean.npy'))
+                    std = np.load(os.path.join(self.dir_processed, 'normal_std.npy'))
                     mean = np.expand_dims(mean, axis=1)
                     std = np.expand_dims(std, axis=1)
                     npy_data = np.divide(npy_data - mean, std)
@@ -222,8 +208,8 @@ class factory_class:
                                                 '%s'%abnormal_npy_list[npy_idx]))
                 npy_data = npy_data.astype(np.float32)
                 if data_flags.use_normalize:
-                    mean = np.load(os.path.join(self.dir_processed, 'abnormal_mean.npy'))
-                    std = np.load(os.path.join(self.dir_processed, 'abnormal_std.npy'))
+                    mean = np.load(os.path.join(self.dir_processed, 'normal_mean.npy'))
+                    std = np.load(os.path.join(self.dir_processed, 'normal_std.npy'))
                     mean = np.expand_dims(mean, axis=1)
                     std = np.expand_dims(std, axis=1)
                     npy_data = np.divide(npy_data - mean, std)
@@ -235,8 +221,11 @@ class factory_class:
                     np.save(dir_seg, seg)
 
     def make_train_data(self):
-        self.dir_train_data = os.path.join(self.dir_processed, 'train_data.npy')
-        self.dir_test_data = os.path.join(self.dir_processed, 'test_data.npy')
+        print('[i]    Function : make_train_data')
+        self.dir_train_data = os.path.join(self.dir_processed, 'train_data_Ls_%d.npy'\
+                                                                %self.data_flags.Ls)
+        self.dir_test_data = os.path.join(self.dir_processed, 'test_data_Ls_%d.npy'\
+                                                                %self.data_flags.Ls)
         if (not os.path.exists(self.dir_train_data)) or (not os.path.exists(self.dir_test_data)):
             num_normal_train = len(os.listdir(self.dir_img_normal_train))
             num_normal_test = len(os.listdir(self.dir_img_normal_test))
@@ -255,7 +244,6 @@ class factory_class:
             normal_train_data = np.append(dirs_normal_train, label_normal_train, axis=1)
             abnormal_train_data = np.append(dirs_abnormal_train, label_abnormal_train, axis=1)
             train_data = np.append(normal_train_data, abnormal_train_data, axis=0)
-            num_train_data = train_data.shape[0]
             dirs_normal_test = []
             dirs_abnormal_test = []
             for idx in range(num_normal_test):
@@ -269,7 +257,6 @@ class factory_class:
             normal_test_data = np.append(dirs_normal_test, label_normal_test, axis=1)
             abnormal_test_data = np.append(dirs_abnormal_test, label_abnormal_test, axis=1)
             test_data = np.append(normal_test_data, abnormal_test_data, axis=0)
-            num_test_data = test_data.shape[0]
             np.save(self.dir_train_data, train_data)
             np.save(self.dir_test_data, test_data)
 
