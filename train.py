@@ -2,11 +2,12 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"]='3'
 import utils.flags as flags_module
+import utils.factory as factory_module
 import models.vgg16 as model_module
-import importlib
 import numpy as np
 import tensorflow as tf
 import pdb
+import matplotlib.pyplot as plt
 
 
 class train_class:
@@ -16,6 +17,7 @@ class train_class:
         self.data_flags = flags_module.get_data_flags()
         self.train_flags = flags_module.get_train_flags()
         ### Check preprocessed_dir
+        dir_raw_data = os.path.join(self.sys_flags.dir_data_base, 'raw_data')
         dir_processed = self.sys_flags.dir_processed_data
         if not os.path.exists(dir_processed):
             self._make_dir(dir_processed)
@@ -23,8 +25,21 @@ class train_class:
                                      'Ls_%d_Ls_shift_%d'%(self.data_flags.Ls, 
                                                           self.data_flags.Ls_shift))
         if not os.path.exists(dir_processed):
-            self._make_Dir(dir_processed)
-        dir_factory = importlib.import_module(sys_flags.module_factory)
+            self._make_dir(dir_processed)
+        dir_npys = factory_module.txt_to_npy(dir_processed, dir_raw_data)
+        npy_list = os.listdir(dir_npys)
+        for npy_name in npy_list:
+            dir_npy = os.path.join(dir_npys, npy_name)
+            total_data = np.load(dir_npy)
+            for i in range(4):
+                dir_fig = os.path.join(os.getcwd(), '%s_%d.png'%(npy_name, i))
+                data = total_data[:, 1+i]
+                plt.figure()
+                plt.plot(data)
+                plt.grid()
+                plt.savefig(dir_fig)
+                plt.close()
+        pdb.set_trace()
         self.factory = dir_factory.factory_class(dir_processed, sys_flags, data_flags)
         model_class = model_module.vgg16(input_shape = (4, 256, 1))
         self.model = model_class.model

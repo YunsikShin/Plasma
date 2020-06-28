@@ -5,6 +5,30 @@ import pdb
 import matplotlib.pyplot as plt
 
 
+def txt_to_npy(dir_processed_data, dir_raw_data):
+    print('[Shin]  Function : txt_to_npy')
+    dir_npys = os.path.join(dir_processed_data, 'txt_to_npy')
+    if not os.path.exists(dir_npys):
+        os.mkdir(dir_npys)
+        data_list = os.listdir(dir_raw_data)
+        for dir_idx in range(len(data_list)):
+            print('[Shin]    Processing %s data'%data_list[dir_idx])
+            dir_data = os.path.join(dir_raw_data, data_list[dir_idx])
+            f = open(dir_data, 'r')
+            num_line = 0
+            total_data = []
+            while True:
+                line = f.readline()
+                if not line:break
+                line_split = line.split('  ')
+                total_data.append(line_split[1:])
+            total_data = np.array(total_data).astype(np.float32)
+            dir_npy = os.path.join(dir_npys, data_list[dir_idx])
+            np.save(dir_npy, total_data)
+    return dir_npys
+
+
+
 class factory_class:
     def __init__(self, dir_processed, sys_flags, data_flags):
         print('[i]  Class : factory_class')

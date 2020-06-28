@@ -12,6 +12,10 @@ self.train_flags = flags_module.get_data_flags()
 dir_processed = os.path.join(dir_processed, 'Ls_%d_Ls_shift_%d')
 ```
 2. Transform Data from TXT to Numpy
+```
+dir_npys = factory_module.txt_to_npy(dir_processed, dir_raw_data)
+```
+
 
 
 ## Training PipeLine
