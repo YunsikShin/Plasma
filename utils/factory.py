@@ -4,8 +4,9 @@ import os
 import pdb
 import matplotlib.pyplot as plt
 
+
 class factory_class:
-    def __init__(self, sys_flags, data_flags):
+    def __init__(self, dir_processed, sys_flags, data_flags):
         print('[i]  Class : factory_class')
         self.sys_flags = sys_flags
         self.data_flags = data_flags

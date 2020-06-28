@@ -11,11 +11,21 @@ import pdb
 
 class train_class:
     def __init__(self):
+        ### Get Flags
         self.sys_flags = flags_module.get_sys_flags()
         self.data_flags = flags_module.get_data_flags()
         self.train_flags = flags_module.get_train_flags()
+        ### Check preprocessed_dir
+        dir_processed = self.sys_flags.dir_processed_data
+        if not os.path.exists(dir_processed):
+            self._make_dir(dir_processed)
+        dir_processed = os.path.join(dir_processed, 
+                                     'Ls_%d_Ls_shift_%d'%(self.data_flags.Ls, 
+                                                          self.data_flags.Ls_shift))
+        if not os.path.exists(dir_processed):
+            self._make_Dir(dir_processed)
         dir_factory = importlib.import_module(sys_flags.module_factory)
-        self.factory = dir_factory.factory_class(sys_flags, data_flags)
+        self.factory = dir_factory.factory_class(dir_processed, sys_flags, data_flags)
         model_class = model_module.vgg16(input_shape = (4, 256, 1))
         self.model = model_class.model
         self.initialization()
@@ -204,6 +214,8 @@ class train_class:
 
 
 if __name__ == '__main__':
+    sys_flags = flags_module.get_sys_flags()
+    train_flags = flags_module.get_train_flags()
     np.random.seed(sys_flags.random_seed)
     tf.random.set_seed(sys_flags.random_seed)
     gpus = tf.config.experimental.list_physical_devices('GPU')

@@ -4,12 +4,11 @@ import os
 
 def get_sys_flags():
     parser = argparse.ArgumentParser()
-    hdd4_name = 'c42ef0d9-c5aa-4351-baa5-cbe8ea455b00'
     parser.add_argument('--dir_cwd', default=os.getcwd())
     parser.add_argument('--dir_data_base', default=os.path.join('/mnt', 'mnt',
-                                                                hdd4_name, 'Plasma'))
-    parser.add_argument('--dir_processed_data', default=os.path.join('/mnt', 'mnt', hdd4_name,
-                                                                        'Plasma', 'processed'))
+                                                                'sdd', 'Plasma'))
+    parser.add_argument('--dir_processed_data', default=os.path.join('/mnt', 'mnt', 'sdd',
+                                                                     'Plasma', 'processed'))
     parser.add_argument('--module_factory', default='utils.factory')
     parser.add_argument('--random_seed', default=777)
     flags = parser.parse_args()
