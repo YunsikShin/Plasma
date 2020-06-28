@@ -10,10 +10,10 @@ import pdb
 
 
 class train_class:
-    def __init__(self, sys_flags, data_flags, train_flags):
-        self.sys_flags = sys_flags
-        self.data_flags = data_flags
-        self.train_flags = train_flags
+    def __init__(self):
+        self.sys_flags = flags_module.get_sys_flags()
+        self.data_flags = flags_module.get_data_flags()
+        self.train_flags = flags_module.get_train_flags()
         dir_factory = importlib.import_module(sys_flags.module_factory)
         self.factory = dir_factory.factory_class(sys_flags, data_flags)
         model_class = model_module.vgg16(input_shape = (4, 256, 1))
@@ -204,9 +204,6 @@ class train_class:
 
 
 if __name__ == '__main__':
-    sys_flags = flags_module.get_sys_flags()
-    data_flags = flags_module.get_data_flags()
-    train_flags = flags_module.get_train_flags()
     np.random.seed(sys_flags.random_seed)
     tf.random.set_seed(sys_flags.random_seed)
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -219,4 +216,4 @@ if __name__ == '__main__':
             tf.config.experimental.set_visible_devices(gpus[train_flags.gpu_num], 'GPU')
         except RuntimeError as e:
             print(e)
-    train_class(sys_flags = sys_flags, data_flags = data_flags, train_flags = train_flags)
+    train_class()
