@@ -19,3 +19,4 @@ dir_npys = factory_module.txt_to_npy(dir_processed, dir_raw_data)
 
 
 ## Training PipeLine
+test
