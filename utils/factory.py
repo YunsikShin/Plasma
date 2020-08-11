@@ -2,141 +2,129 @@ import numpy as np
 import csv
 import os
 import pdb
+import pickle
 import matplotlib.pyplot as plt
-
-
-def txt_to_npy(dir_processed_data, dir_raw_data):
-    print('[Shin]  Function : txt_to_npy')
-    dir_npys = os.path.join(dir_processed_data, 'txt_to_npy')
-    if not os.path.exists(dir_npys):
-        os.mkdir(dir_npys)
-        data_list = os.listdir(dir_raw_data)
-        for dir_idx in range(len(data_list)):
-            print('[Shin]    Processing %s data'%data_list[dir_idx])
-            dir_data = os.path.join(dir_raw_data, data_list[dir_idx])
-            f = open(dir_data, 'r')
-            num_line = 0
-            total_data = []
-            while True:
-                line = f.readline()
-                if not line:break
-                line_split = line.split('  ')
-                total_data.append(line_split[1:])
-            total_data = np.array(total_data).astype(np.float32)
-            dir_npy = os.path.join(dir_npys, data_list[dir_idx])
-            np.save(dir_npy, total_data)
-    return dir_npys
-
-
+import matplotlib as mpl
+mpl.rcParams['agg.path.chunksize'] = 10000
 
 class factory_class:
-    def __init__(self, dir_processed, sys_flags, data_flags):
+    def __init__(self, sys_flags, data_flags):
         print('[i]  Class : factory_class')
         self.sys_flags = sys_flags
         self.data_flags = data_flags
-        self.initialization()
-        self.csv_to_npy()
+        self.prepare_dirs()
+        self.txt_to_npy()
+        self.detect_arcing()
+        pdb.set_trace()
         self.make_npy_figs()
         self.rm_after_arching()
         self.get_statistical_value()
         self.get_img()
         self.make_train_data()
 
-    def initialization(self):
+    def prepare_dirs(self):
+        print('[i]  Function : prepare_dirs')
         sys_flags = self.sys_flags
-        self.dir_cwd = os.getcwd()
-        self.dir_raw_data_normal = os.path.join(sys_flags.dir_data_base, 'raw_data', 'normal.csv')
-        self.dir_raw_data_abnormal = os.path.join(sys_flags.dir_data_base, 'raw_data', 'abnormal.csv')
-        self.dir_processed = os.path.join(sys_flags.dir_data_base, 'processed')
-        self._make_dir(self.dir_processed)
+        data_flags = self.data_flags
+        data_flags_dict = vars(data_flags)
+        dir_processed_data = sys_flags.dir_processed_data
+        self._make_dir(dir_processed_data)
+        env_list = os.listdir(dir_processed_data)
+        if not env_list:
+            dir_processed_data = os.path.join(dir_processed_data, 'env_1')
+            self._make_dir(dir_processed_data)
+            dir_env_pkl = os.path.join(dir_processed_data, 'data_flags.pkl')
+            with open(dir_env_pkl, 'wb') as f:
+                pickle.dump(data_flags_dict, f, pickle.HIGHEST_PROTOCOL)
+        else:
+            find_same_data_flag = False
+            for env_name in env_list:
+                dir_env_pkl = os.path.join(dir_processed_data, env_name, 'data_flags.pkl')
+                with open(dir_env_pkl, 'rb') as f:
+                    saved_pkl = pickle.load(f)
+                if len(data_flags_dict) != len(saved_pkl):
+                    pass
+                elif data_flags_dict == saved_pkl:
+                    dir_processed_data = os.path.join(dir_processed_data, env_name)
+                    find_same_data_flag = True
+                    break
+            if find_same_data_flag == False:
+                new_env_name = 'env_%d'%(len(env_list)+1)
+                dir_processed_data = os.path.join(dir_processed_data, new_env_name)
+                self._make_dir(dir_processed_data)
+                with open(os.path.join(dir_processed_data, 'data_flags.pkl'), 'wb') as f:
+                    pickle.dump(data_flags_dict, f, pickle.HIGHEST_PROTOCOL)
+        self.dir_processed_data = dir_processed_data
 
-    def csv_to_npy(self):
-        print('[i]    Function : csv_to_npy')
-        dir_processed_npy = os.path.join(self.dir_processed, 'npy')
-        self.dir_processed_npy_normal = os.path.join(dir_processed_npy, 'normal')
-        self.dir_processed_npy_abnormal = os.path.join(dir_processed_npy, 'abnormal')
-        if not os.path.exists(dir_processed_npy):
-            self._make_dir(dir_processed_npy)
-            self._make_dir(self.dir_processed_npy_normal)
-            with open(self.dir_raw_data_normal, newline='') as csvfile:
-                reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-                data_normal = list(reader)
-                row_count_normal = len(data_normal)
-            data_normal = np.array(data_normal)
-            for seg_idx in range(int(row_count_normal/10000)):
-                dir_seg = os.path.join(self.dir_processed_npy_normal, '%d.npy'%seg_idx)
-                seg = data_normal[10000*seg_idx:10000*(seg_idx+1)]
-                np.save(dir_seg, np.transpose(seg))
-            del data_normal
-            self._make_dir(self.dir_processed_npy_abnormal)
-            with open(self.dir_raw_data_abnormal, newline='') as csvfile:
-                reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-                data_abnormal = list(reader)
-                row_count_abnormal = len(data_abnormal)
-            data_abnormal = np.array(data_abnormal)
-            for seg_idx in range(int(row_count_abnormal/10000)):
-                dir_seg = os.path.join(self.dir_processed_npy_abnormal, '%d.npy'%seg_idx)
-                seg = data_abnormal[10000*seg_idx:10000*(seg_idx+1)]
-                np.save(dir_seg, np.transpose(seg))
-            del data_abnormal
-        self.num_npy_normal = len(os.listdir(self.dir_processed_npy_normal))
-        self.num_npy_abnormal = len(os.listdir(self.dir_processed_npy_abnormal))
+    def txt_to_npy(self):
+        print('[Shin]  Function : txt_to_npy')
+        self.dir_npys = os.path.join(self.dir_processed_data, 'txt_to_npy')
+        if not os.path.exists(self.dir_npys):
+            self._make_dir(self.dir_npys)
+            dir_raw_data = os.path.join(self.sys_flags.dir_data_base, 'raw_data')
+            data_list = os.listdir(dir_raw_data)
+            for dir_idx in range(len(data_list)):
+                print('[Shin]    Processing %s data'%data_list[dir_idx])
+                dir_data = os.path.join(dir_raw_data, data_list[dir_idx])
+                f = open(dir_data, 'r')
+                num_line = 0
+                total_data = []
+                while True:
+                    line = f.readline()
+                    if not line:break
+                    line_split = line.split('  ')
+                    total_data.append(line_split[1:])
+                total_data = np.array(total_data).astype(np.float32)
+                total_data = np.transpose(total_data)
+                dir_npy = os.path.join(self.dir_npys, data_list[dir_idx])
+                np.save(dir_npy, total_data)
+
+    def detect_arcing(self):
+        print('[i]  Function : detect_arcing')
+        scen_length = 10000
+        list_npys = os.listdir(self.dir_npys)
+        for npy in list_npys:
+            data = np.load(os.path.join(self.dir_npys, npy))
+            data = np.transpose(data)
+            num_scen = int(data.shape[1] / scen_length)
+            avg_d = np.zeros(shape = (4, num_scen))
+            for scen_idx in range(num_scen):
+                time = data[0, scen_length*scen_idx : scen_length*(scen_idx+1)]
+                data_1 = data[1, scen_length*scen_idx : scen_length*(scen_idx+1)]
+                data_2 = data[2, scen_length*scen_idx : scen_length*(scen_idx+1)]
+                data_3 = data[3, scen_length*scen_idx : scen_length*(scen_idx+1)]
+                data_4 = data[4, scen_length*scen_idx : scen_length*(scen_idx+1)]
+                avg_d[0, scen_idx] = np.mean(data_1)
+                avg_d[1, scen_idx] = np.mean(data_2)
+                avg_d[2, scen_idx] = np.mean(data_3)
+                avg_d[3, scen_idx] = np.mean(data_4)
+            idx_upper = np.where(avg_d[2, :] < -65)[0]
+            idx_lower = np.where(avg_d[2, :] > -67)[0]
+            indices = []
+            for idx in range(num_scen):
+                if (idx in idx_upper) and (idx in idx_lower):
+                    indices.append(idx)
+            print(npy, len(indices))
+        pdb.set_trace()
 
     def make_npy_figs(self):
         print('[i]    Function : make_npy_figs')
-        self.dir_npy_figs = os.path.join(self.dir_processed, 'npy_figs')
-        num_fig = 5
-        if not os.path.exists(self.dir_npy_figs):
-            self._make_dir(self.dir_npy_figs)
-            for npy_idx in range(num_fig):
-                npy_data_normal = np.load(os.path.join(self.dir_processed_npy_normal, 
-                                                       '%d.npy'%npy_idx))
-                npy_data_abnormal = np.load(os.path.join(self.dir_processed_npy_abnormal,
-                                                         '%d.npy'%npy_idx))
-                for char_idx in range(4):
-                    arr_data_normal = npy_data_normal[char_idx+1, :].astype(np.float32)
-                    arr_data_abnormal = npy_data_abnormal[char_idx+1, :].astype(np.float32)
-                    dir_fig = os.path.join(self.dir_npy_figs, 
-                                           'compare_signal_%d_npy_%d.png'%(char_idx+1, npy_idx))
-                    fig = plt.figure()
-                    ax = fig.add_subplot(111)
-                    ax.plot(arr_data_normal, alpha=0.5, lw=3, color='b')
-                    ax.plot(arr_data_abnormal, alpha=0.5, lw=3, color='r')
-                    plt.grid()
-                    plt.savefig(dir_fig)
-            #for npy_idx in range(num_fig):
-            #    npy_data = np.load(os.path.join(self.dir_processed_npy_normal, '%d.npy'%npy_idx))
-            #    for char_idx in range(4):
-            #        array_data = npy_data[char_idx+1, :]
-            #        dir_fig = os.path.join(self.dir_npy_figs, 
-            #                               'normal_char_%d_npy_%d.png'%(char_idx+1, npy_idx))
-            #        plt.figure()
-            #        plt.plot(array_data)
-            #        plt.grid()
-            #        plt.savefig(dir_fig)
-            #        plt.close()
-            #num_abnormal = len(os.listdir(self.dir_processed_npy_abnormal))
-            #for npy_idx in range(num_fig):
-            #    npy_data = np.load(os.path.join(self.dir_processed_npy_abnormal, '%d.npy')%npy_idx)
-            #    for char_idx in range(4):
-            #        array_data = npy_data[char_idx+1, :]
-            #        dir_fig = os.path.join(self.dir_npy_figs, 
-            #                               'abnormal_char_%d_npy_%d.png'%(char_idx+1, npy_idx))
-            #        plt.figure()
-            #        plt.plot(array_data)
-            #        plt.grid()
-            #        plt.savefig(dir_fig)
-            #        plt.close()
-
-    def rm_after_arching(self):
-        print('[i]    Function : rm_after_arching')
-        self.dir_npy_abnormal_rm = os.path.join(self.dir_processed, 'npy', 'rm_abnormal')
-        if not os.path.exists(self.dir_npy_abnormal_rm):
-            self._make_dir(self.dir_npy_abnormal_rm)
-            for npy_idx in range(self.num_npy_abnormal):
-                npy_data = np.load(os.path.join(self.dir_processed_npy_abnormal, '%d.npy'%npy_idx))
-                npy_useful = npy_data[:, :7000]
-                np.save(os.path.join(self.dir_npy_abnormal_rm, '%d.npy'%npy_idx), npy_useful)
+        num_signals = 4
+        list_data = os.listdir(self.dir_npys)
+        num_data = len(list_data)
+        for npy_idx in range(num_data):
+            data = np.load(os.path.join(self.dir_npys, list_data[npy_idx]))
+            data = np.transpose(data)
+            for sig_idx in range(num_signals):
+                signal = data[sig_idx, :]
+                dir_fig = os.path.join(os.getcwd(), 
+                                       '%s_signal_%d.png'%(list_data[npy_idx], sig_idx))
+                plt.figure(figsize=(20,20))
+                plt.plot(signal[:50000])
+                plt.grid()
+                plt.savefig(dir_fig)
+                plt.close()
+        pdb.set_trace()
 
     def get_statistical_value(self):
         print('[i]    Function : get_statistical_value')

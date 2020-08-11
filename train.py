@@ -17,15 +17,16 @@ class train_class:
         self.data_flags = flags_module.get_data_flags()
         self.train_flags = flags_module.get_train_flags()
         ### Check preprocessed_dir
+        factory_class = factory_module.factory_class(self.sys_flags, self.data_flags)
         dir_raw_data = os.path.join(self.sys_flags.dir_data_base, 'raw_data')
         dir_processed = self.sys_flags.dir_processed_data
         if not os.path.exists(dir_processed):
             self._make_dir(dir_processed)
-        dir_processed = os.path.join(dir_processed, 
+        self.dir_processed = os.path.join(dir_processed, 
                                      'Ls_%d_Ls_shift_%d'%(self.data_flags.Ls, 
                                                           self.data_flags.Ls_shift))
-        if not os.path.exists(dir_processed):
-            self._make_dir(dir_processed)
+        if not os.path.exists(self.dir_processed):
+            self._make_dir(self.dir_processed)
         dir_npys = factory_module.txt_to_npy(dir_processed, dir_raw_data)
         npy_list = os.listdir(dir_npys)
         for npy_name in npy_list:
