@@ -3,27 +3,28 @@ import csv
 import os
 import pdb
 import pickle
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['agg.path.chunksize'] = 10000
 
 class factory_class:
     def __init__(self, sys_flags, data_flags):
-        print('[i]  Class : factory_class')
+        print('[Shin]  Class : factory_class')
         self.sys_flags = sys_flags
         self.data_flags = data_flags
+        self.sig_names = ['time stamp', 'Probe Voltage', 'AIP Current', 'AIP Voltage', 
+                          'Floating-potential probe Voltage']
         self.prepare_dirs()
-        self.txt_to_npy()
-        self.detect_arcing()
-        pdb.set_trace()
-        self.make_npy_figs()
-        self.rm_after_arching()
+        self.csv_to_npy()
+        self.split_normal_abnormal()
+        self.data_analysis()
         self.get_statistical_value()
         self.get_img()
         self.make_train_data()
 
     def prepare_dirs(self):
-        print('[i]  Function : prepare_dirs')
+        print('[Shin]  Function : prepare_dirs')
         sys_flags = self.sys_flags
         data_flags = self.data_flags
         data_flags_dict = vars(data_flags)
@@ -56,59 +57,71 @@ class factory_class:
                     pickle.dump(data_flags_dict, f, pickle.HIGHEST_PROTOCOL)
         self.dir_processed_data = dir_processed_data
 
-    def txt_to_npy(self):
+    def csv_to_npy(self):
         print('[Shin]  Function : txt_to_npy')
-        self.dir_npys = os.path.join(self.dir_processed_data, 'txt_to_npy')
+        self.dir_npys = os.path.join(self.dir_processed_data, 'csv_to_npy')
         if not os.path.exists(self.dir_npys):
             self._make_dir(self.dir_npys)
             dir_raw_data = os.path.join(self.sys_flags.dir_data_base, 'raw_data')
-            data_list = os.listdir(dir_raw_data)
-            for dir_idx in range(len(data_list)):
-                print('[Shin]    Processing %s data'%data_list[dir_idx])
-                dir_data = os.path.join(dir_raw_data, data_list[dir_idx])
-                f = open(dir_data, 'r')
-                num_line = 0
-                total_data = []
-                while True:
-                    line = f.readline()
-                    if not line:break
-                    line_split = line.split('  ')
-                    total_data.append(line_split[1:])
-                total_data = np.array(total_data).astype(np.float32)
-                total_data = np.transpose(total_data)
-                dir_npy = os.path.join(self.dir_npys, data_list[dir_idx])
-                np.save(dir_npy, total_data)
+            data_names = os.listdir(dir_raw_data)
+            for data_name in data_names:
+                print('[Shin]    Processing %s data'%data_name)
+                dir_data = os.path.join(dir_raw_data, data_name)
+                data = pd.read_csv(dir_data)
+                npy = np.transpose(data.to_numpy())
+                npy_name = '_'.join(data_name.split('.')[0].split('_')[-2:])
+                dir_npy = os.path.join(self.dir_npys, npy_name)
+                np.save(dir_npy, npy)
 
-    def detect_arcing(self):
-        print('[i]  Function : detect_arcing')
-        scen_length = 10000
-        list_npys = os.listdir(self.dir_npys)
-        for npy in list_npys:
-            data = np.load(os.path.join(self.dir_npys, npy))
-            data = np.transpose(data)
-            num_scen = int(data.shape[1] / scen_length)
-            avg_d = np.zeros(shape = (4, num_scen))
-            for scen_idx in range(num_scen):
-                time = data[0, scen_length*scen_idx : scen_length*(scen_idx+1)]
-                data_1 = data[1, scen_length*scen_idx : scen_length*(scen_idx+1)]
-                data_2 = data[2, scen_length*scen_idx : scen_length*(scen_idx+1)]
-                data_3 = data[3, scen_length*scen_idx : scen_length*(scen_idx+1)]
-                data_4 = data[4, scen_length*scen_idx : scen_length*(scen_idx+1)]
-                avg_d[0, scen_idx] = np.mean(data_1)
-                avg_d[1, scen_idx] = np.mean(data_2)
-                avg_d[2, scen_idx] = np.mean(data_3)
-                avg_d[3, scen_idx] = np.mean(data_4)
-            idx_upper = np.where(avg_d[2, :] < -65)[0]
-            idx_lower = np.where(avg_d[2, :] > -67)[0]
-            indices = []
-            for idx in range(num_scen):
-                if (idx in idx_upper) and (idx in idx_lower):
-                    indices.append(idx)
-            print(npy, len(indices))
-        pdb.set_trace()
+    def split_normal_abnormal(self):
+        print('[Shin]  Function : split_normal_abnormal')
+        self.dir_normal = os.path.join(self.dir_processed_data, 'npy_split_normal')
+        self.dir_abnormal = os.path.join(self.dir_processed_data, 'npy_split_abnormal')
+        data_list = os.listdir(self.dir_npys)
+        if not os.path.exists(self.dir_normal):
+            os.mkdir(self.dir_normal)
+            os.mkdir(self.dir_abnormal)
+            for data_name in data_list:
+                if data_name.split('.')[0].split('_')[0] == 'normal':
+                    normal_abnormal = 'normal'
+                elif data_name.split('.')[0].split('_')[0] == 'abnormal':
+                    normal_abnormal = 'abnormal'
+                dir_data = os.path.join(self.dir_npys, data_name)
+                data = np.load(dir_data)
+                t_length = data.shape[1]
+                num_scen = int(t_length // 10000)
+                for scen_idx in range(num_scen):
+                    if normal_abnormal == 'normal':
+                        num_scen_data = len(os.listdir(self.dir_normal))
+                        dir_scen_data = os.path.join(self.dir_normal, 'scen_%d.npy'%num_scen_data)
+                    elif normal_abnormal == 'abnormal':
+                        num_Scen_data = len(os.listdir(self.dir_abnormal))
+                        dir_scen_data = os.path.join(self.dir_abnormal, 'scen_%d.npy'%num_Scen_data)
+                    scen_data = data[:, 10000*scen_idx : 10000*(scen_idx+1)]
+                    np.save(dir_scen_data, scen_data)
+        num_normal = len(os.listdir(self.dir_normal))
+        num_abnormal = len(os.listdir(self.dir_abnormal))
+        print('[Shin]    Num normal   :', num_normal)
+        print('[Shin]    Num abnormal :', num_abnormal)
+
+    def data_analysis(self):
+        dir_figs = os.path.join(
+        npy_names = os.listdir(self.dir_npys)
+        for npy_name in npy_names:
+            dir_npy = os.path.join(self.dir_npys, npy_name)
+            npy = np.load(dir_npy)
+            num_scen = (npy.shape[1] // 10000)
+            for scen_idx in range(num_scen-1):
+                time_ = npy[0, 10000*scen_idx:10000*(scen_idx+1)-1]
+                print(scen_idx)
+                print(time_)
+            print(num_scen)
+            print(npy[0, 10000*num_scen:])
+            pdb.set_trace()
+        
 
     def make_npy_figs(self):
-        print('[i]    Function : make_npy_figs')
+        print('[Shin]    Function : make_npy_figs')
         num_signals = 4
         list_data = os.listdir(self.dir_npys)
         num_data = len(list_data)
@@ -127,7 +140,7 @@ class factory_class:
         pdb.set_trace()
 
     def get_statistical_value(self):
-        print('[i]    Function : get_statistical_value')
+        print('[Shin]    Function : get_statistical_value')
         self.dir_normal_mean = os.path.join(self.dir_processed, 'normal_mean.npy')
         self.dir_normal_std = os.path.join(self.dir_processed, 'normal_std.npy')
         self.dir_abnormal_mean = os.path.join(self.dir_processed, 'abnormal_mean.npy')
@@ -277,3 +290,42 @@ class factory_class:
         if not os.path.exists(dir_):
             os.mkdir(dir_)
 
+    #def detect_arcing(self):
+    #    print('[Shin]  Function : detect_arcing')
+    #    scen_length = 10000
+    #    list_npys = np.sort(os.listdir(self.dir_npys))
+    #    total_avg_d2 = []
+    #    for npy in list_npys:
+    #        data = np.load(os.path.join(self.dir_npys, npy))
+    #        num_scen = int(data.shape[1] / scen_length)
+    #        avg_d = np.zeros(shape = (4, num_scen))
+    #        for scen_idx in range(num_scen):
+    #            time = data[0, scen_length*scen_idx : scen_length*(scen_idx+1)]
+    #            data_1 = data[1, scen_length*scen_idx : scen_length*(scen_idx+1)]
+    #            data_2 = data[2, scen_length*scen_idx : scen_length*(scen_idx+1)]
+    #            data_3 = data[3, scen_length*scen_idx : scen_length*(scen_idx+1)]
+    #            data_4 = data[4, scen_length*scen_idx : scen_length*(scen_idx+1)]
+    #            avg_d[0, scen_idx] = np.mean(data_1)
+    #            avg_d[1, scen_idx] = np.mean(data_2)
+    #            avg_d[2, scen_idx] = np.mean(data_3)
+    #            avg_d[3, scen_idx] = np.mean(data_4)
+    #        idx_upper = np.where(avg_d[2, :] < -65)[0]
+    #        idx_lower = np.where(avg_d[2, :] > -67)[0]
+    #        indices = []
+    #        for idx in range(num_scen):
+    #            if (idx in idx_upper) and (idx in idx_lower):
+    #                indices.append(idx)
+    #        print(npy, len(indices))
+    #        total_avg_d2.extend(avg_d[2, :])
+    #    d2_len = len(total_avg_d2)
+    #    upper = [-65]*d2_len
+    #    lower = [-68]*d2_len
+    #    dir_fig = os.path.join(os.getcwd(), 'avg_d.png')
+    #    plt.figure()
+    #    plt.plot(total_avg_d2)
+    #    plt.grid()
+    #    plt.plot(upper, c='r')
+    #    plt.plot(lower, c='r')
+    #    plt.savefig(dir_fig)
+    #    plt.close()
+    #    pdb.set_trace()

@@ -3,9 +3,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"]='3'
 import utils.flags as flags_module
 import utils.factory as factory_module
-import models.vgg16 as model_module
 import numpy as np
-import tensorflow as tf
 import pdb
 import matplotlib.pyplot as plt
 
@@ -233,15 +231,4 @@ if __name__ == '__main__':
     sys_flags = flags_module.get_sys_flags()
     train_flags = flags_module.get_train_flags()
     np.random.seed(sys_flags.random_seed)
-    tf.random.set_seed(sys_flags.random_seed)
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        try:
-            tf.config.experimental.set_memory_growth(gpus[0], True)
-            tf.config.experimental.set_memory_growth(gpus[1], True)
-            tf.config.experimental.set_memory_growth(gpus[2], True)
-            tf.config.experimental.set_memory_growth(gpus[3], True)
-            tf.config.experimental.set_visible_devices(gpus[train_flags.gpu_num], 'GPU')
-        except RuntimeError as e:
-            print(e)
     train_class()
